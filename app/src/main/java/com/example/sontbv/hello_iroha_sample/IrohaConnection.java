@@ -49,9 +49,9 @@ public class IrohaConnection {
             Keypair userKeys = crypto.generateKeypair();
             Keypair adminKeys = crypto.convertFromExisting(PUB_KEY, PRIV_KEY);
             // Create account
-            UnsignedTx createAccount = txBuilder.creatorAccountId("admin@test")
+            UnsignedTx createAccount = txBuilder.creatorAccountId(Constant.CREATOR)
                     .createdTime(BigInteger.valueOf(currentTime))
-                    .createAccount(username, "test", userKeys.publicKey())
+                    .createAccount(username, Constant.DOMAIN_ID, userKeys.publicKey())
                     .build();
 
             // sign transaction and get its binary representation (Blob)
