@@ -3,6 +3,14 @@ package com.example.sontbv.hello_iroha_sample;
 import android.content.Context;
 import android.util.Log;
 
+
+import com.example.binding.ByteVector;
+import com.example.binding.Keypair;
+import com.example.binding.ModelCrypto;
+import com.example.binding.ModelProtoTransaction;
+import com.example.binding.ModelQueryBuilder;
+import com.example.binding.ModelTransactionBuilder;
+import com.example.binding.UnsignedTx;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -13,18 +21,11 @@ import java.util.concurrent.TimeUnit;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.reactivex.Single;
-import iroha.protocol.BlockOuterClass;
 import iroha.protocol.CommandServiceGrpc;
 import iroha.protocol.Endpoint;
 import iroha.protocol.TransactionOuterClass;
-import jp.co.soramitsu.iroha.android.ByteVector;
-import jp.co.soramitsu.iroha.android.Keypair;
-import jp.co.soramitsu.iroha.android.ModelCrypto;
-import jp.co.soramitsu.iroha.android.ModelProtoTransaction;
-import jp.co.soramitsu.iroha.android.ModelQueryBuilder;
-import jp.co.soramitsu.iroha.android.ModelTransactionBuilder;
-import jp.co.soramitsu.iroha.android.UnsignedTx;
 
+import static com.example.sontbv.hello_iroha_sample.Constant.CREATOR;
 import static com.example.sontbv.hello_iroha_sample.Constant.DOMAIN_ID;
 import static com.example.sontbv.hello_iroha_sample.Constant.PRIV_KEY;
 import static com.example.sontbv.hello_iroha_sample.Constant.PUB_KEY;
@@ -35,6 +36,7 @@ public class IrohaConnection {
     private final ModelCrypto crypto = new ModelCrypto();
     private final ModelTransactionBuilder txBuilder = new ModelTransactionBuilder();
     private final ManagedChannel channel;
+    private ModelQueryBuilder queryBuilder = new ModelQueryBuilder();
 
     public IrohaConnection(Context context){
         channel = ManagedChannelBuilder.forAddress(context.getString(R.string.iroha_url),
@@ -75,7 +77,7 @@ public class IrohaConnection {
 
             // Send transaction to iroha
             CommandServiceGrpc.CommandServiceBlockingStub stub = CommandServiceGrpc.newBlockingStub(channel)
-                    .withDeadlineAfter(5, TimeUnit.SECONDS);
+                    .withDeadlineAfter(20, TimeUnit.SECONDS);
             stub.torii(protoTx);
             Log.e(TAG, "1");
             // Check if it was successful
@@ -84,73 +86,39 @@ public class IrohaConnection {
                 emitter.onError(new RuntimeException("Transaction failed"));
             }
 
-            Log.d(TAG, protoTx.getPayload().getReducedPayload().getCreatorAccountId());
-            Log.d(TAG, protoTx.getPayload().getReducedPayload().getCreatedTime() + "");
-            Log.d(TAG, protoTx.getPayload().getReducedPayload().getQuorum() + "");
+            // GET ASSET INFO
 
-            Log.e(TAG, "2");
-
-            try {
-                Thread.sleep(5000);
-            }
-            catch(InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-
-            Log.e(TAG, createAccount.hash().hex());
-
-
-
-
-            // Set account details
-//            UnsignedTx setDetailsTransaction = txBuilder.creatorAccountId(username + "@" + DOMAIN_ID)
+//            long startQueryCounter = 1;
+//            UnsignedQuery uquery = queryBuilder.creatorAccountId(CREATOR)
+//                    .queryCounter(BigInteger.valueOf(startQueryCounter))
 //                    .createdTime(BigInteger.valueOf(currentTime))
-//                    .txCounter(BigInteger.valueOf(TX_COUNTER))
-//                    .setAccountDetail(username + "@" + DOMAIN_ID, "myFirstDetail", details)
+//                    .getAssetInfo("coin#test")
 //                    .build();
-//            Log.e(TAG, "3");
-//            // sign transaction and get its binary representation (Blob)
-//            txblob = protoTxHelper.signAndAddSignature(setDetailsTransaction, userKeys).blob();
-//
-//            // Convert ByteVector to byte array
-//            bs = toByteArray(txblob);
-//            // create proto object
-//            try {
-//                protoTx = TransactionOuterClass.Transaction.parseFrom(bs);
-//            } catch (InvalidProtocolBufferException e) {
-//                emitter.onError(e);
-//            }
-//            Log.e(TAG, "4");
-//
-//            // Send transaction to iroha
-//            stub = CommandServiceGrpc.newBlockingStub(channel);
-//            stub.torii(protoTx);
-//
-//            // Check if it was successful
-//            if (!isTransactionSuccessful(stub, setDetailsTransaction)) {
-//                emitter.onError(new RuntimeException("Transaction failed"));
-//            }
-//            Log.e(TAG, "5");
-//            // Query the result
-//            UnsignedQuery firstName = queryBuilder.creatorAccountId(username + "@" + DOMAIN_ID)
-//                    .queryCounter(BigInteger.valueOf(QUERY_COUNTER))
-//                    .createdTime(BigInteger.valueOf(currentTime))
-//                    .getAccountDetail(username + "@" + DOMAIN_ID)
-//                    .build();
-//            ByteVector queryBlob = protoQueryHelper.signAndAddSignature(firstName, userKeys).blob();
+//            ByteVector queryBlob = new ModelProtoQuery(uquery).signAndAddSignature(adminKeys).finish().blob();
 //            byte bquery[] = toByteArray(queryBlob);
-//            Log.e(TAG, "6");
+//
 //            Queries.Query protoQuery = null;
 //            try {
 //                protoQuery = Queries.Query.parseFrom(bquery);
 //            } catch (InvalidProtocolBufferException e) {
-//                emitter.onError(e);
+//                Log.e(TAG, "Exception while converting byte array to protobuf:" + e.getMessage());
 //            }
 //
 //            QueryServiceGrpc.QueryServiceBlockingStub queryStub = QueryServiceGrpc.newBlockingStub(channel);
 //            QryResponses.QueryResponse queryResponse = queryStub.find(protoQuery);
-//            Log.e(TAG, "7");
-//            emitter.onSuccess(queryResponse.getAccountDetailResponse().getDetail());
+//
+//            QryResponses.Asset asset = queryResponse.getAssetResponse().getAsset();
+//
+//            try {
+//                Thread.sleep(5000);
+//            }
+//            catch(InterruptedException ex) {
+//                Thread.currentThread().interrupt();
+//            }
+//
+//            Log.d(TAG,"Asset Id = " + asset.getAssetId());
+//            Log.d(TAG, "Precision = " + asset.getPrecision());
+//            Log.d(TAG, queryResponse.getAccountDetailResponse().getDetail().toString() + "123");
         });
     }
 
